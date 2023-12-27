@@ -1,43 +1,33 @@
-from flask import Flask, render_template, request, jsonify
-
-
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-
-
-tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
-model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
-
+from flask import Flask, render_template, request, jsonify, session
+from gpt import GPTAssistant
+import os
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
 
 @app.route("/")
 def index():
+    # Generate a unique session_id during the first request
+    if 'session_id' not in session:
+        assitant = GPTAssistant()
+        session['session_id'] = assitant.session_id
+
     return render_template('chat.html')
 
-
-@app.route("/get", methods=["GET", "POST"])
+@app.route("/get", methods=["POST"])
 def chat():
     msg = request.form["msg"]
-    input = msg
-    return get_Chat_response(input)
+    
+    # Retrieve session_id from the session
+    try:
+        session_id = session.get('session_id', None)
+        assitant = GPTAssistant(session_id)
+    except:
+        assitant = GPTAssistant()
+        session['session_id'] = assitant.session_id       
+    bot_response = assitant.gpt_response(msg)
 
-
-def get_Chat_response(text):
-
-    # Let's chat for 5 lines
-    for step in range(5):
-        # encode the new user input, add the eos_token and return a tensor in Pytorch
-        new_user_input_ids = tokenizer.encode(str(text) + tokenizer.eos_token, return_tensors='pt')
-
-        # append the new user input tokens to the chat history
-        bot_input_ids = torch.cat([chat_history_ids, new_user_input_ids], dim=-1) if step > 0 else new_user_input_ids
-
-        # generated a response while limiting the total chat history to 1000 tokens, 
-        chat_history_ids = model.generate(bot_input_ids, max_length=1000, pad_token_id=tokenizer.eos_token_id)
-
-        # pretty print last ouput tokens from bot
-        return tokenizer.decode(chat_history_ids[:, bot_input_ids.shape[-1]:][0], skip_special_tokens=True)
+    return bot_response
 
 
 if __name__ == '__main__':

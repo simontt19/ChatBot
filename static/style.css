@@ -221,3 +221,12 @@ border-radius: 0 0 15px 15px !important;
 	margin-bottom: 15px !important;
 }
 }
+/* Add these styles to your existing CSS file or in a <style> tag in your HTML head */
+.typing {
+    font-style: italic;
+    color: #aaa;
+}
+
+#typingIndicator {
+    display: none;
+}
